@@ -6,7 +6,8 @@ conda activate r_sparse
 cd "$(dirname "$0")/../.."
 
 model=meta-llama/Llama-2-7b-hf
-TASKS=winogrande,piqa,sciq,openbookqa,hellaswag,boolq,arc_easy,arc_challenge
+# evaluation.py는 호출당 태스크 1개만 지원한다 (다중 태스크 → NotImplementedError)
+TASKS="winogrande piqa sciq openbookqa hellaswag boolq arc_easy arc_challenge"
 
 if [ ! -f ../low_rank_models/llama-2-7b/model.layers.31.mlp.down_proj.pt ]; then
     echo "=== [phase2] generating low-rank weights for llama-2-7b ==="
@@ -15,10 +16,12 @@ if [ ! -f ../low_rank_models/llama-2-7b/model.layers.31.mlp.down_proj.pt ]; then
         --output_dir ../low_rank_models/llama-2-7b
 fi
 
-echo "=== [phase2] FULL / 8 tasks ==="
-python -u evaluation.py \
-    --tasks $TASKS --num_fewshot 0 \
-    --model_name $model --method full \
-    --config_file config/llama-2-7b-hf_default.json
+for task in $TASKS; do
+    echo "=== [phase2] FULL / $task ==="
+    python -u evaluation.py \
+        --tasks $task --num_fewshot 0 \
+        --model_name $model --method full \
+        --config_file config/llama-2-7b-hf_default.json
+done
 
 echo "=== [phase2] done ==="
