@@ -5,6 +5,13 @@ source ~/workspace/miniconda3/etc/profile.d/conda.sh
 conda activate r_sparse
 cd "$(dirname "$0")/../.."
 
+# low-rank weight 준비 대기 (phase2_llama2_prep.sh가 생성)
+deadline=$((SECONDS + 21600))
+until [ -f ../low_rank_models/llama-2-7b/model.layers.31.mlp.down_proj.pt ]; do
+    [ $SECONDS -ge $deadline ] && { echo "timeout waiting for low-rank weights" >&2; exit 1; }
+    sleep 60
+done
+
 python -u utils/search_recipe.py \
     --model_name meta-llama/Llama-2-7b-hf \
     --config_file config/llama-2-7b-hf_default.json \
