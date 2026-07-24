@@ -12,6 +12,10 @@ from models.modeling_llama import LlamaForCausalLM_R_Sparse, R_Sparse_Linear
 __all__ = ['setup_config', 'setup_model']
 
 def setup_model(args):
+    # RSPARSE_DTYPE=float16 등으로 로드 정밀도 지정 (기본 fp32).
+    # 40GB GPU에서 fp32 모델 + 대용량 low-rank 인자가 안 들어가는 설정(낮은 rho)용.
+    _dtype = os.environ.get('RSPARSE_DTYPE')
+    _dtype_kw = {'torch_dtype': getattr(torch, _dtype)} if _dtype else {}
     config = AutoConfig.from_pretrained(args.model_name, cache_dir=args.cache_dir)
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, use_fast=False, cache_dir=args.cache_dir)
     if args.method == 'full':
@@ -23,8 +27,8 @@ def setup_model(args):
                 config=config, cache_dir=args.cache_dir, device_map='auto', trust_remote_code=True)
     elif args.method == 'r_sparse':
         config = setup_config(config, args)
-        model = LlamaForCausalLM_R_Sparse.from_pretrained(args.model_name, 
-                config=config, cache_dir=args.cache_dir, device_map='auto', trust_remote_code=True)
+        model = LlamaForCausalLM_R_Sparse.from_pretrained(args.model_name,
+                config=config, cache_dir=args.cache_dir, device_map='auto', trust_remote_code=True, **_dtype_kw)
         model = set_threshold_r_sparse(model, config, args, R_Sparse_Linear, tokenizer)
     else:
         raise NotImplementedError
